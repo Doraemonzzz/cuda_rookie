@@ -40,3 +40,4 @@
 
 build/
 benchmark_results/
+matrixValidationFailure.txt
