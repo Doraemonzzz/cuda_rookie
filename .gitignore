@@ -39,3 +39,4 @@
 *.fatbin
 
 build/
+benchmark_results/
