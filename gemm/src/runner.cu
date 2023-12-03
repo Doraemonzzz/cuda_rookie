@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 
 #define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
 
@@ -151,11 +152,21 @@ void runCublasTF32(cublasHandle_t handle, int M, int N, int K, float alpha,
                CUBLAS_COMPUTE_32F_FAST_TF32, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
 }
 
+void run_gemm_naive(int M, int N, int K, float alpha, float *A, float *B,
+                     float beta, float *C) {
+  dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32));
+  dim3 blockDim(32, 32);
+  gemm_naive<<<gridDim, blockDim>>>(M, N, K, A, B, C);
+}
+
 void run_kernel(int kernel_num, int M, int N, int K, float alpha, float *A,
                 float *B, float beta, float *C, cublasHandle_t handle) {
   switch (kernel_num) {
   case 0:
     runCublasFP32(handle, M, N, K, alpha, A, B, beta, C);
+    break;
+  case 1:
+    run_gemm_naive(M, N, K, alpha, A, B, beta, C);
     break;
   default:
     throw std::invalid_argument("Unknown kernel number");
