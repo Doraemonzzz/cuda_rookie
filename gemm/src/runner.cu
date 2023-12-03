@@ -167,6 +167,20 @@ void run_gemm_mem_coalesce(int M, int N, int K, float alpha, float *A, float *B,
       <<<gridDim, blockDim>>>(M, N, K, A, B, C);
 }
 
+void run_gemm_shared_memory(int M, int N, int K, float alpha, float *A,
+                                float *B, float beta, float *C) {
+  dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32));
+  dim3 blockDim(32 * 32);
+  // L1 cache becomes useless, since we access GMEM only via SMEM, so we carve
+  // out all of L1 to SMEM. This doesn't currently make a difference, since
+  // occupancy is limited by reg and thread count, but it's good to do anyway.
+  // cudaFuncSetAttribute(gemm_shared_memory<32>,
+  //                      cudaFuncAttributePreferredSharedMemoryCarveout,
+  //                      cudaSharedmemCarveoutMaxShared);
+  gemm_shared_memory<32>
+      <<<gridDim, blockDim>>>(M, N, K, A, B, C);
+}
+
 void run_kernel(int kernel_num, int M, int N, int K, float alpha, float *A,
                 float *B, float beta, float *C, cublasHandle_t handle) {
   switch (kernel_num) {
@@ -178,6 +192,9 @@ void run_kernel(int kernel_num, int M, int N, int K, float alpha, float *A,
     break;
   case 2:
     run_gemm_mem_coalesce(M, N, K, alpha, A, B, beta, C);
+    break;
+  case 3:
+    run_gemm_shared_memory(M, N, K, alpha, A, B, beta, C);
     break;
   default:
     throw std::invalid_argument("Unknown kernel number");
